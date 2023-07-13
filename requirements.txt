@@ -1,0 +1,8 @@
+jupyter
+transformers
+datasets
+accelerate
+tokenizers
+evaluate
+scipy
+scikit-learn
