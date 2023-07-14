@@ -21,6 +21,7 @@ from sklearn.preprocessing import LabelEncoder
 import logging
 import transformers
 import datasets
+datasets.disable_progress_bar()
 import os
 import sys
 logger = logging.getLogger(__name__)
