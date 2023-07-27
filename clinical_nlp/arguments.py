@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 @dataclass
-class DataTrainingArguments:
+class DataArguments:
     """
     Arguments pertaining to what data we are going to input our model for training and eval.
 
@@ -17,8 +17,9 @@ class DataTrainingArguments:
         default=None, metadata={"help": "The name of the revision of the dataset."}
     )
     dataset_sample: Optional[float] = field(
-        default=None, metadata={"help": "The percentage of the dataset to use."}
+        default=1.0, metadata={"help": "The percentage of the dataset to use."}
     )
+
 @dataclass
 class ModelArguments:
     """
@@ -58,4 +59,22 @@ class ModelArguments:
     ignore_mismatched_sizes: bool = field(
         default=False,
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
+    )
+
+@dataclass
+class PipelineArguments:
+    batch_size: int = field(
+        default=64, metadata={"help": "The batch size to use for the pipeline."}
+    )
+    device: int = field(
+        default=0, metadata={"help": "The device to use for the pipeline."}
+    )
+    truncation: bool = field(
+        default=True, metadata={"help": "Whether to truncate the input."}
+    )
+
+@dataclass
+class PredictionArguments:
+    prediction_file: str = field(
+        metadata={"help": "The file to write predictions to."}
     )

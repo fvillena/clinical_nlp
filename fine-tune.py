@@ -13,7 +13,7 @@ from transformers import (
     set_seed,
     )
 from transformers.trainer_utils import get_last_checkpoint
-from clinical_nlp.arguments import DataTrainingArguments, ModelArguments
+from clinical_nlp.arguments import DataArguments, ModelArguments
 from datasets import load_dataset
 import evaluate
 import numpy as np
@@ -37,7 +37,7 @@ def compute_metrics(eval_pred):
     return metric.compute(predictions=predictions, references=labels, average='weighted')
 
 if __name__ == "__main__":
-    parser = HfArgumentParser((DataTrainingArguments, ModelArguments, TrainingArguments))
+    parser = HfArgumentParser((DataArguments, ModelArguments, TrainingArguments))
     data_args, model_args, training_args = parser.parse_args_into_dataclasses()
 
     # Setup logging
