@@ -2,4 +2,9 @@ logs
 *.pyc
 __pycache__
 models/*
+!models/predictions/
 !models/.gitkeep
+models/predictions/*
+!models/predictions/.gitkeep
+reports/*
+!reports/.gitkeep
