@@ -114,4 +114,4 @@ if __name__ == "__main__":
         compute_metrics=compute_metrics,
     )
     trainer.train()
-    trainer.save_model()
+    trainer.save_model(f"{training_args.output_dir}/final")
