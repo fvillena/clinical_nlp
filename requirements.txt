@@ -6,3 +6,4 @@ tokenizers
 evaluate
 scipy
 scikit-learn
+xformers
