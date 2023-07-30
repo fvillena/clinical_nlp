@@ -7,3 +7,4 @@ evaluate
 scipy
 scikit-learn
 xformers
+peft

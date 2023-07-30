@@ -60,6 +60,10 @@ class ModelArguments:
         default=False,
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
     )
+    peft: bool = field(
+        default=False,
+        metadata={"help": "Whether to use the PEFT."},
+    )
 
 @dataclass
 class PipelineArguments:

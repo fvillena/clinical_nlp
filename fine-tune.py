@@ -105,6 +105,17 @@ if __name__ == "__main__":
         id2label=id2label, 
         label2id=label2id
         )
+    if model_args.peft:
+        from peft import LoraConfig, TaskType, get_peft_model
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_CLS,
+            inference_mode=False,
+            r=8,
+            lora_alpha=32,
+            lora_dropout=0.1,
+        )
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
     trainer = Trainer(
         model=model,
         args=training_args,
