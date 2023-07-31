@@ -64,6 +64,10 @@ class ModelArguments:
         default=False,
         metadata={"help": "Whether to use the PEFT."},
     )
+    task: str = field(
+        default="text-classification",
+        metadata={"help": "The task to use the model for."},
+    )
 
 @dataclass
 class PipelineArguments:
