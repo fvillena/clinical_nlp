@@ -35,6 +35,7 @@ if __name__ == "__main__":
                 system_message="Eres un asistente serio que sólo da respuestas precisas y concisas que recibirá diagnósticos en Español y deberás sólo responder con el nombre de la especialidad en Español a la cual debe enviarse el diagnóstico. Las especialidades disponibles son: <classes>.",
                 user_template='¿A qué especialidad debo enviar el diagnóstico "<x>"?.',
                 classes=classes,
+                retry_message="No encuentro en tu mensaje ninguna de las especialidades de la lista de especialidades disponibles. Por favor, intenta nuevamente."
             )
             test_data = test_data.map(
                 lambda x: {"prediction": model.predict(x["text"])}, num_proc=12
