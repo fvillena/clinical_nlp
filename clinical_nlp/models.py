@@ -89,6 +89,7 @@ class IclNer(IclModel):
         schema_string += f'y "{items[-1][0]}" para {items[-1][1]}'
         self.system_message = system_message.replace("<entities>", entity_names_string).replace("<schema>", schema_string)
         self.user_template = user_template
+        self.entities = keys
     
     def predict(self, x):
         def get_json(completion):
@@ -118,4 +119,15 @@ class IclNer(IclModel):
             except:
                 logger.warning(f"JSON decoding error: {completion}")
                 y = None
+        result = {}
+        if y:
+            for entity in self.entities:
+                if entity in y:
+                    result[entity] = y[entity]
+                else:
+                    result[entity] = []
+        else:
+            for entity in self.entities:
+                result[entity] = []
+        y = result
         return y
