@@ -12,4 +12,5 @@ venv
 data/raw/*
 !data/raw/wl
 !data/raw/spanish_diagnostics
+!data/raw/ges
 !data/raw/.gitkeep

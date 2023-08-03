@@ -4,3 +4,6 @@
 [submodule "data/raw/spanish_diagnostics"]
 	path = data/raw/spanish_diagnostics
 	url = https://huggingface.co/datasets/fvillena/spanish_diagnostics
+[submodule "data/raw/ges"]
+	path = data/raw/ges
+	url = https://huggingface.co/datasets/fvillena/ges
