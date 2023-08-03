@@ -10,4 +10,5 @@ reports/*
 !reports/.gitkeep
 venv
 data/raw/*
+!data/raw/wl
 !data/raw/.gitkeep
