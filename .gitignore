@@ -8,3 +8,4 @@ models/predictions/*
 !models/predictions/.gitkeep
 reports/*
 !reports/.gitkeep
+venv
