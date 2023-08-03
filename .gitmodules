@@ -1,3 +1,6 @@
 [submodule "data/raw/wl"]
 	path = data/raw/wl
 	url = https://huggingface.co/datasets/plncmm/wl
+[submodule "data/raw/spanish_diagnostics"]
+	path = data/raw/spanish_diagnostics
+	url = https://huggingface.co/datasets/fvillena/spanish_diagnostics
