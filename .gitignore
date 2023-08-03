@@ -9,3 +9,5 @@ models/predictions/*
 reports/*
 !reports/.gitkeep
 venv
+data/raw/*
+!data/raw/.gitkeep
