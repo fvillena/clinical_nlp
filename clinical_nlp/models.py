@@ -123,7 +123,12 @@ class IclNer(IclModel):
         if y:
             for entity in self.entities:
                 if entity in y:
-                    result[entity] = y[entity]
+                    def checktype(obj):
+                        return isinstance(obj, list) and all(isinstance(elem, str) for elem in obj)
+                    if checktype(y[entity]):
+                        result[entity] = y[entity]
+                    else:
+                        result[entity] = []
                 else:
                     result[entity] = []
         else:
