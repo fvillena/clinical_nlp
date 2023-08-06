@@ -1,12 +1,11 @@
 import requests
-import json
+import json, json5
 from unidecode import unidecode
 import re
 # logger
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class IclModel:
     def __init__(self, model_url, max_tokens=256, stop=["\n", "###"], max_retries=3):
@@ -33,12 +32,14 @@ class IclModel:
 
 class IclClassifier(IclModel):
     def contextualize(self, system_message, classes, user_template, retry_message):
+        self.classes = classes
+        if isinstance(classes, dict):
+            classes = list(classes.keys())
         classes_string = ""
         for c in classes[:-1]:
             classes_string += c + ", "
         classes_string += f"y {classes[-1]}"
         self.system_message = system_message.replace("<classes>", classes_string)
-        self.classes = classes
         self.user_template = user_template
         self.retry_message = retry_message
 
@@ -48,10 +49,17 @@ class IclClassifier(IclModel):
 
         def label(completion):
             y = None
-            for c in self.classes:
-                if preprocess(c) in preprocess(completion):
-                    y = c.upper()
-                    break
+            if not isinstance(self.classes, dict):
+                for c in self.classes:
+                    if preprocess(c) in preprocess(completion):
+                        y = c.upper()
+                        break
+            else:
+                for c, strings in self.classes.items():
+                    for s in strings:
+                        if preprocess(s) in preprocess(completion):
+                            y = c.upper()
+                            break
             return y
 
         messages = [
@@ -108,14 +116,14 @@ class IclNer(IclModel):
         completion = self.query_model(messages)
         logger.info(f"Completion: {completion}")
         try:
-            y = json.loads(get_json(completion))
+            y = json5.loads(get_json(completion))
         except Exception as e:
             logger.warning(e)
             messages.append({"content": completion, "role": "assistant"})
             messages.append({"content": f"No puedo decodificar tu json porque tiene este error: {e}", "role": "user"})
             try:
                 completion = self.query_model(messages)
-                y = json.loads(get_json(completion))
+                y = json5.loads(get_json(completion))
             except:
                 logger.warning(f"JSON decoding error: {completion}")
                 y = None
