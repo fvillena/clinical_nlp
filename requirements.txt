@@ -10,3 +10,4 @@ xformers
 peft
 unidecode
 seqeval
+json5
