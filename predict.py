@@ -31,7 +31,12 @@ if __name__ == "__main__":
     if model_args.task == "text-classification":
         if "http" in model_args.model_name_or_path:
             classes = list(set(test_data["label"]))
-            model = IclClassifier(model_args.model_name_or_path)
+            if not model_args.api_key:
+                model = IclClassifier(model_args.model_name_or_path)
+            else:
+                model = IclClassifier(
+                    model_args.model_name_or_path, api_key=model_args.api_key
+                )
             if "spanish_diagnostics" in data_args.dataset_name:
                 model.contextualize(
                     system_message="Eres un asistente serio que sólo da respuestas precisas y concisas que recibirá diagnósticos en Español y deberás sólo responder con el nombre de la especialidad en Español a la cual debe enviarse el diagnóstico. Las especialidades disponibles son: <classes>.",
