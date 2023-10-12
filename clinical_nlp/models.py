@@ -2,31 +2,51 @@ import requests
 import json, json5
 from unidecode import unidecode
 import re
+from time import sleep
 # logger
 import logging
 
 logger = logging.getLogger(__name__)
 
 class IclModel:
-    def __init__(self, model_url, max_tokens=256, stop=["\n", "###"], max_retries=3):
+    def __init__(self, model_url, api_key=None, max_tokens=256, stop=["\n", "###"], max_retries=3):
         self.model_url = model_url
         self.max_tokens = max_tokens
         self.stop = stop
         self.max_retries = max_retries
+        self.api_key = api_key
 
     def query_model(self, messages):
         payload = json.dumps(
             {
+                "model": None if not self.api_key else "gpt-3.5-turbo",
                 "messages": messages,
                 "max_tokens": self.max_tokens,
                 "stop": self.stop,
             }
         )
-        headers = {"accept": "application/json", "Content-Type": "application/json"}
-        response = requests.request(
-            "POST", self.model_url, headers=headers, data=payload
-        )
-        completion = response.json()["choices"][0]["message"]["content"].strip()
+        if not self.api_key:
+            headers = {"accept": "application/json", "Content-Type": "application/json"}
+        else:
+            headers = {"accept": "application/json", "Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"}
+        
+        for i in range(3):
+            completion = ""
+            try:
+                response = requests.request(
+                    "POST", self.model_url, headers=headers, data=payload, timeout=2
+                )
+                if "error" in response.json():
+                    raise Exception(response.json()["error"])
+                completion = response.json()["choices"][0]["message"]["content"].strip()
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"Timeout: {e}")
+                continue
+            except Exception as e:
+                logger.warning(f"Error: {e}")
+                sleep(1)
+                continue
+            break
         return completion
 
 
