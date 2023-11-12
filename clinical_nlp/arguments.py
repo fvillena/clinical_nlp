@@ -32,6 +32,12 @@ class ModelArguments:
     api_key: Optional[str] = field(
         default=None, metadata={"help": "The API key to use for the model."}
     )
+    few_shot: bool = field(
+        default=False, metadata={"help": "If true, will use the few-shot model."}
+    )
+    openai_model_name: Optional[str] = field(
+        default="gpt-3.5-turbo", metadata={"help": "The name of the openai model to use."}
+    )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
     )
