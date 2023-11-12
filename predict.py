@@ -10,6 +10,7 @@ from clinical_nlp.arguments import (
     PredictionArguments,
 )
 from clinical_nlp.models import IclClassifier, IclNer
+from llmner import ZeroShotNer, FewShotNer
 import re
 
 if __name__ == "__main__":
@@ -97,58 +98,83 @@ if __name__ == "__main__":
     elif model_args.task == "ner":
         label_list = data["train"].features[f"ner_tags"].feature.names
         if "http" in model_args.model_name_or_path:
-            model = IclNer(model_args.model_name_or_path, max_tokens=2048, stop=["###"])
-            model.contextualize(
-                system_message="Eres un detector de menciones de entidades médicas en Español que debe extraer las menciones de <entities> desde los textos que se te entreguen. Formatea la respuesta en json. Sólo responde con el json y nunca uses saltos de línea. Las llaves del json es: <schema>. El valor de cada llave es la lista de menciones para esa entidad.",
-                user_template="<x>",
-                entities={
-                    "disease": "Enfermedad",
-                    "medication": "Medicamento",
-                    "abbreviation": "Abreviatura",
-                    "body_part": "Parte del cuerpo",
-                    "family_member": "Miembro de la familia",
-                    "laboratory_or_test_result": "Resultado de laboratorio o test",
-                    "clinical_finding": "Hallazgo clínico",
-                    "diagnostic_procedure": "Procedimiento diagnóstico",
-                    "laboratory_procedure": "Procedimiento de laboratorio",
-                    "therapeutic_procedure": "Procedimiento terapéutico",
-                },
-            )
-            test_data = test_data.map(
-                lambda x: {"prediction": model.predict(" ".join(x["tokens"]))}
-            )
+            from langchain.globals import set_llm_cache
+            from langchain.cache import InMemoryCache, SQLiteCache
+            import os
 
-            def get_ner_tags(d, tokens):
-                string = " ".join(tokens).lower()
-                idxs = []
-                i = 0
-                tags = ["O"] * len(tokens)
-                for s in string:
-                    if s == " ":
-                        i += 1
-                        idxs.append(-100)
-                    else:
-                        idxs.append(i)
-                if d:
-                    for entity, mentions in d.items():
-                        if mentions:
-                            for mention in mentions:
-                                try:
-                                    for match in re.finditer(mention.lower(), string):
-                                        start = match.start()
-                                        end = match.end()
-                                        start_token_idx = idxs[start]
-                                        end_token_idx = idxs[end - 1]
-                                        for j, k in enumerate(
-                                            range(start_token_idx, end_token_idx + 1)
-                                        ):
-                                            if j == 0:
-                                                tags[k] = f"B-{entity}"
-                                            else:
-                                                tags[k] = f"I-{entity}"
-                                except:
-                                    continue
-                return tags
+            set_llm_cache(InMemoryCache())
+            # set_llm_cache(SQLiteCache(database_path=".langchain.db"))
+
+            os.environ["OPENAI_API_BASE"] = model_args.model_name_or_path
+            os.environ[
+                "OPENAI_API_KEY"
+            ] = model_args.api_key
+
+            entities = {
+                "disease": "alteración o desviación del estado fisiológico en una o varias partes del cuerpo, por causas en general conocidas, manifestada por síntomas y signos característicos, y cuya evolución es más o menos previsible",
+                "medication": "Medicamentos o drogas empleadas en el tratamiento y o prevención de enfermedades",
+                "abbreviation": "Abreviatura",
+                "body_part": "Órgano o una parte anatómica de una persona",
+                "family_member": "Miembro de la familia",
+                "laboratory_or_test_result": "Resultado de laboratorio o test",
+                "clinical_finding": "Observaciones, juicios o evaluaciones que se hacen sobre los pacientes",
+                "diagnostic_procedure": "Exámenes que permiten determinar la condición del individuo ",
+                "laboratory_procedure": "Exámenes que se realizan en diversas muestras de pacientes que permiten diagnosticar enfermedades mediante la detección de biomarcadores y otros parámetros",
+                "therapeutic_procedure": "Actividad o tratamiento que es empleado para prevenir, reparar, eliminar o curar la enfermedad del individuo",
+            }
+
+            prompt_template = """Eres reconocedor de entidades nombradas que solo debe detectar las entidades en la siguiente lista: 
+{entities} 
+Debes responder con el mismo texto de entrada, pero con las entidades nombradas anotadas con etiquetas en la misma línea (<nombre_entidad>lorem ipsum</nombre_entidad>), donde cada etiqueta corresponde a un nombre de entidad, por ejemplo: <entidad>Sed ut perspiciatis</entidad> unde omnis iste natus error sit voluptatem <entidad>accusantium</entidad>.
+Las únicas etiquetas disponibles son: {entity_list}, no puedes agregar más etiquetas de las incluidas en esa lista.
+IMPORTANTE: NO DEBES CAMBIAR EL TEXTO DE ENTRADA, SÓLO AGREGAR LAS ETIQUETAS."""
+
+            if not model_args.few_shot:
+                model = ZeroShotNer(max_tokens=1024, model = model_args.openai_model_name)
+                model.contextualize(
+                    entities=entities,
+                    prompt_template=prompt_template,
+                )
+            else:
+                from llmner.utils import (
+                    inline_annotation_to_annotated_document,
+                    conll_to_inline_annotated_string,
+                )
+
+                label_list = list(
+                    map(
+                        lambda x: x.capitalize(),
+                        data["train"].features[f"ner_tags"].feature.names,
+                    )
+                )
+                label2id = dict(zip(label_list, range(len(label_list))))
+                id2label = dict(zip(label2id.values(), label2id.keys()))
+                shots = []
+                for document in data["train"]:
+                    conll = list(
+                        zip(
+                            document["tokens"],
+                            map(lambda x: id2label[x], document["ner_tags"]),
+                        )
+                    )
+                    annotated_string = conll_to_inline_annotated_string(conll)
+                    annotated_document = inline_annotation_to_annotated_document(
+                        annotated_string, entity_set=list(entities.keys())
+                    )
+                    shots.append(annotated_document)
+                model = FewShotNer(max_tokens=1024, model = model_args.openai_model_name)
+                model.contextualize(
+                    entities=entities,
+                    prompt_template=prompt_template,
+                    examples=shots[:5],
+                )
+            test_data = test_data.map(
+                lambda x: {
+                    "prediction": [
+                        t[1] for t in model.predict_tokenized([x["tokens"]])[0]
+                    ]
+                }, num_proc=12
+            )
 
             sentences = test_data["tokens"]
             true = list(
@@ -157,12 +183,7 @@ if __name__ == "__main__":
                     test_data["ner_tags"],
                 )
             )
-            predicted = list(
-                map(
-                    lambda x: [l.capitalize() for l in get_ner_tags(x[1], x[0])],
-                    zip(test_data["tokens"], test_data["prediction"]),
-                )
-            )
+            predicted = test_data["prediction"]
         else:
             from transformers import (
                 AutoTokenizer,

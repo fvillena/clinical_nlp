@@ -11,3 +11,4 @@ peft
 unidecode
 seqeval
 json5
+llmner @ git+https://github.com/plncmm/llmner.git
