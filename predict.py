@@ -36,7 +36,10 @@ if __name__ == "__main__":
                 model = IclClassifier(model_args.model_name_or_path)
             else:
                 model = IclClassifier(
-                    model_args.model_name_or_path, api_key=model_args.api_key
+                    model_args.model_name_or_path,
+                    api_key=model_args.api_key,
+                    model_name=model_args.openai_model_name,
+                    stop=["###"]
                 )
             if "spanish_diagnostics" in data_args.dataset_name:
                 model.contextualize(
@@ -49,35 +52,67 @@ if __name__ == "__main__":
                     lambda x: {"prediction": model.predict(x["text"])}, num_proc=12
                 )
             elif "ges" in data_args.dataset_name:
-                model.contextualize(
-                    system_message='En Chile, las garantías explícitas de salud establecen prioridad para un conjunto de problemas de salud. Debes responder en español sólo la palabra "Verdadero" si la enfermedad que te entregue pertenece a uno de los 80 problemas de salud y sólo la palabra "Falso" si la enfermedad no pertenece al conjunto de problemas. Los problemas de salud son: "Accidente Cerebrovascular Isquémico en personas de 15 años y más", "Alivio del dolor y cuidados paliativos por cáncer avanzado ", "Analgesia del Parto", "Artritis Reumatoídea", "Artritis idiopática juvenil", "Asma Bronquial moderada y grave en personas menores de 15 años", "Asma bronquial en personas de 15 años y más", "Cardiopatías congénitas operables en menores de 15 años", "Colecistectomía preventiva del cáncer de vesícula en personas de 35 a 49 años", "Consumo Perjudicial o Dependencia de riesgo bajo a moderado de alcohol y drogas en personas menores de 20 años", "Cáncer Cervicouterino", "Cáncer Colorectal en personas de 15 años y más", "Cáncer Vesical en personas de 15 años y más", "Cáncer de Ovario Epitelial", "Cáncer de mama en personas de 15 años y más", "Cáncer de próstata en personas de 15 años y más", "Cáncer de testículo en personas de 15 años y más", "Cáncer en personas menores de 15 años", "Cáncer gástrico", "Depresión en personas de 15 años y más", "Desprendimiento de retina regmatógeno no traumático", "Diabetes Mellitus Tipo 1", "Diabetes Mellitus Tipo 2", "Displasia broncopulmonar del prematuro", "Displasia luxante de caderas", "Disrafias espinales", "Endoprótesis total de cadera en personas de 65 años y más con artrosis de cadera con limitación funcional severa", "Enfermedad Pulmonar Obstructiva Crónica de Tratamiento Ambulatorio", "Enfermedad Renal Crónica Etapa 4 y 5", "Enfermedad de Parkinson", "Epilepsia no refractaria en personas de 15 años y más", "Epilepsia no refractaria en personas desde 1 año y menores de 15 años", "Esclerosis múltiple remitente recurrente ", "Esquizofrenia", "Estrabismo en personas menores de 9 años", "Fibrosis Quística", "Fisura labiopalatina", "Gran Quemado", "Hemofilia", "Hemorragia Subaracnoidea secundaria a Ruptura de Aneurismas Cerebrales", "Hepatitis C", "Hepatitis crónica por Virus Hepatitis B", "Hipertensión arterial primaria o esencial en personas de 15 años y más", "Hipoacusia Bilateral en personas de 65 años y más que requieren uso de audífono", "Hipoacusia neurosensorial bilateral del prematuro", "Hipotiroidismo en personas de 15 años y más", "Infarto agudo del miocardio", "Infección respiratoria aguda (IRA) de manejo ambulatorio en personas menores de 5 años", "Leucemia en personas de 15 años y más", "Linfomas en personas de 15 años y más", "Lupus Eritematoso Sistémico", "Neumonía adquirida en la comunidad de manejo ambulatorio en personas de 65 años y más", "Osteosarcoma en personas de 15 años y más", "Politraumatizado Grave", "Prevención de Parto Prematuro", "Prevención secundaria enfermedad renal crónica terminal", "Retinopatía del prematuro", "Retinopatía diabética", "Salud Oral Integral del adulto de 60 años", "Salud oral integral de la embarazada", "Salud oral integral para niños y niñas de 6 años", "Síndrome de Dificultad Respiratoria en el recién nacido", "Síndrome de la inmunodeficiencia adquirida VIH/SIDA", "Trastorno Bipolar en personas de 15 años y más", "Trastornos de generación del impulso y conducción en personas de 15 años y más, que requieren Marcapaso", "Tratamiento Médico en personas de 55 años y más con Artrosis de Cadera y/o Rodilla, leve o moderada", "Tratamiento Quirúrgico de Hernia del Núcleo Pulposo Lumbar", "Tratamiento Quirúrgico de lesiones crónicas de la válvula aórtica en personas de 15 años y más", "Tratamiento Quirúrgico de lesiones crónicas de las válvulas mitral y tricúspide en personas de 15 años y más", "Tratamiento de Erradicación del Helicobacter Pylori", "Tratamiento de Hipoacusia moderada en personas menores de 4 años", "Tratamiento de la hiperplasia benigna de la próstata en personas sintomáticas", "Tratamiento quirúrgico de cataratas", "Tratamiento quirúrgico de escoliosis en personas menores de 25 años", "Trauma Ocular Grave", "Traumatismo Cráneo Encefálico moderado o grave", "Tumores Primarios del Sistema Nervioso Central en personas de 15 años o más", "Urgencia Odontológica Ambulatoria", "Vicios de refracción en personas de 65 años y más" y "Órtesis (o ayudas técnicas) para personas de 65 años y más"',
-                    user_template='¿"<x>" pertenece a la lista de 80 problemas de salud priorizados por las garantías explícitas de salud?.',
-                    classes={
-                        "Falso": ["Falso", "False"],
-                        "Verdadero": [
-                            "Verdadero",
-                            "Verídico",
-                            "Verdadeiro",
-                            "Veradero",
-                            "True",
-                        ],
-                    },
-                    retry_message='Responde sólo con la palabra "Verdadero" si la enfermedad pertenece a uno de los 80 problemas de salud y sólo la palabra "Falso" si la enfermedad no pertenece al conjunto de problemas. Por favor, intenta nuevamente.',
+                system_message = 'En Chile, las garantías explícitas de salud establecen prioridad para un conjunto de problemas de salud. Debes responder en español sólo la palabra "Verdadero" si la enfermedad que te entregue pertenece a uno de los 80 problemas de salud y sólo la palabra "Falso" si la enfermedad no pertenece al conjunto de problemas. Los problemas de salud son: "Accidente Cerebrovascular Isquémico en personas de 15 años y más", "Alivio del dolor y cuidados paliativos por cáncer avanzado ", "Analgesia del Parto", "Artritis Reumatoídea", "Artritis idiopática juvenil", "Asma Bronquial moderada y grave en personas menores de 15 años", "Asma bronquial en personas de 15 años y más", "Cardiopatías congénitas operables en menores de 15 años", "Colecistectomía preventiva del cáncer de vesícula en personas de 35 a 49 años", "Consumo Perjudicial o Dependencia de riesgo bajo a moderado de alcohol y drogas en personas menores de 20 años", "Cáncer Cervicouterino", "Cáncer Colorectal en personas de 15 años y más", "Cáncer Vesical en personas de 15 años y más", "Cáncer de Ovario Epitelial", "Cáncer de mama en personas de 15 años y más", "Cáncer de próstata en personas de 15 años y más", "Cáncer de testículo en personas de 15 años y más", "Cáncer en personas menores de 15 años", "Cáncer gástrico", "Depresión en personas de 15 años y más", "Desprendimiento de retina regmatógeno no traumático", "Diabetes Mellitus Tipo 1", "Diabetes Mellitus Tipo 2", "Displasia broncopulmonar del prematuro", "Displasia luxante de caderas", "Disrafias espinales", "Endoprótesis total de cadera en personas de 65 años y más con artrosis de cadera con limitación funcional severa", "Enfermedad Pulmonar Obstructiva Crónica de Tratamiento Ambulatorio", "Enfermedad Renal Crónica Etapa 4 y 5", "Enfermedad de Parkinson", "Epilepsia no refractaria en personas de 15 años y más", "Epilepsia no refractaria en personas desde 1 año y menores de 15 años", "Esclerosis múltiple remitente recurrente ", "Esquizofrenia", "Estrabismo en personas menores de 9 años", "Fibrosis Quística", "Fisura labiopalatina", "Gran Quemado", "Hemofilia", "Hemorragia Subaracnoidea secundaria a Ruptura de Aneurismas Cerebrales", "Hepatitis C", "Hepatitis crónica por Virus Hepatitis B", "Hipertensión arterial primaria o esencial en personas de 15 años y más", "Hipoacusia Bilateral en personas de 65 años y más que requieren uso de audífono", "Hipoacusia neurosensorial bilateral del prematuro", "Hipotiroidismo en personas de 15 años y más", "Infarto agudo del miocardio", "Infección respiratoria aguda (IRA) de manejo ambulatorio en personas menores de 5 años", "Leucemia en personas de 15 años y más", "Linfomas en personas de 15 años y más", "Lupus Eritematoso Sistémico", "Neumonía adquirida en la comunidad de manejo ambulatorio en personas de 65 años y más", "Osteosarcoma en personas de 15 años y más", "Politraumatizado Grave", "Prevención de Parto Prematuro", "Prevención secundaria enfermedad renal crónica terminal", "Retinopatía del prematuro", "Retinopatía diabética", "Salud Oral Integral del adulto de 60 años", "Salud oral integral de la embarazada", "Salud oral integral para niños y niñas de 6 años", "Síndrome de Dificultad Respiratoria en el recién nacido", "Síndrome de la inmunodeficiencia adquirida VIH/SIDA", "Trastorno Bipolar en personas de 15 años y más", "Trastornos de generación del impulso y conducción en personas de 15 años y más, que requieren Marcapaso", "Tratamiento Médico en personas de 55 años y más con Artrosis de Cadera y/o Rodilla, leve o moderada", "Tratamiento Quirúrgico de Hernia del Núcleo Pulposo Lumbar", "Tratamiento Quirúrgico de lesiones crónicas de la válvula aórtica en personas de 15 años y más", "Tratamiento Quirúrgico de lesiones crónicas de las válvulas mitral y tricúspide en personas de 15 años y más", "Tratamiento de Erradicación del Helicobacter Pylori", "Tratamiento de Hipoacusia moderada en personas menores de 4 años", "Tratamiento de la hiperplasia benigna de la próstata en personas sintomáticas", "Tratamiento quirúrgico de cataratas", "Tratamiento quirúrgico de escoliosis en personas menores de 25 años", "Trauma Ocular Grave", "Traumatismo Cráneo Encefálico moderado o grave", "Tumores Primarios del Sistema Nervioso Central en personas de 15 años o más", "Urgencia Odontológica Ambulatoria", "Vicios de refracción en personas de 65 años y más" y "Órtesis (o ayudas técnicas) para personas de 65 años y más"'
+                user_template = '¿"<x>" pertenece a la lista de 80 problemas de salud priorizados por las garantías explícitas de salud?.'
+                classes = {
+                    "Falso": ["Falso", "False"],
+                    "Verdadero": [
+                        "Verdadero",
+                        "Verídico",
+                        "Verdadeiro",
+                        "Veradero",
+                        "True",
+                    ],
+                }
+                classes_map = {"false": "Falso", "true": "Verdadero"}
+                retry_message = 'Responde sólo con la palabra "Verdadero" si la enfermedad pertenece a uno de los 80 problemas de salud y sólo la palabra "Falso" si la enfermedad no pertenece al conjunto de problemas. Por favor, intenta nuevamente.'
+                if not model_args.few_shot:
+                    model.contextualize(
+                        system_message=system_message,
+                        user_template=user_template,
+                        classes=classes,
+                        retry_message=retry_message,
+                    )
+                else:
+                    shots = []
+                    n = 5
+                    for c in classes.keys():
+                        m = 0
+                        for example in data["train"]:
+                            if classes_map[example["label"]] == c:
+                                m += 1
+                                if m <= n:
+                                    shots.append(
+                                        {
+                                            "text": user_template.replace(
+                                                "<x>", example["text"]
+                                            ),
+                                            "label": c,
+                                        }
+                                    )
+                                else:
+                                    break
+                    model.contextualize(
+                        system_message=system_message,
+                        user_template=user_template,
+                        classes=classes,
+                        retry_message=retry_message,
+                        examples=shots,
+                    )
+
+                def parse_prediction(prediction):
+                    response = None
+                    if prediction == "VERDADERO":
+                        response = "true"
+                    elif prediction == "FALSO":
+                        response = "false"
+                    return response
+
+                test_data = test_data.map(
+                    lambda x: {"prediction": parse_prediction(model.predict(x["text"]))}, num_proc=12, load_from_cache_file=False
                 )
-
-            def parse_prediction(prediction):
-                response = None
-                if prediction == "VERDADERO":
-                    response = "true"
-                elif prediction == "FALSO":
-                    response = "false"
-                return response
-
-            test_data = test_data.map(
-                lambda x: {"prediction": parse_prediction(model.predict(x["text"]))}
-            )
-            true = test_data["label"]
-            predicted = test_data["prediction"]
+                true = test_data["label"]
+                predicted = test_data["prediction"]
         else:
             pipe = pipeline(
                 "text-classification",
@@ -106,9 +141,7 @@ if __name__ == "__main__":
             # set_llm_cache(SQLiteCache(database_path=".langchain.db"))
 
             os.environ["OPENAI_API_BASE"] = model_args.model_name_or_path
-            os.environ[
-                "OPENAI_API_KEY"
-            ] = model_args.api_key
+            os.environ["OPENAI_API_KEY"] = model_args.api_key
 
             entities = {
                 "disease": "alteración o desviación del estado fisiológico en una o varias partes del cuerpo, por causas en general conocidas, manifestada por síntomas y signos característicos, y cuya evolución es más o menos previsible",
@@ -130,7 +163,7 @@ Las únicas etiquetas disponibles son: {entity_list}, no puedes agregar más eti
 IMPORTANTE: NO DEBES CAMBIAR EL TEXTO DE ENTRADA, SÓLO AGREGAR LAS ETIQUETAS."""
 
             if not model_args.few_shot:
-                model = ZeroShotNer(max_tokens=1024, model = model_args.openai_model_name)
+                model = ZeroShotNer(max_tokens=1024, model=model_args.openai_model_name)
                 model.contextualize(
                     entities=entities,
                     prompt_template=prompt_template,
@@ -162,7 +195,7 @@ IMPORTANTE: NO DEBES CAMBIAR EL TEXTO DE ENTRADA, SÓLO AGREGAR LAS ETIQUETAS.""
                         annotated_string, entity_set=list(entities.keys())
                     )
                     shots.append(annotated_document)
-                model = FewShotNer(max_tokens=1024, model = model_args.openai_model_name)
+                model = FewShotNer(max_tokens=1024, model=model_args.openai_model_name)
                 model.contextualize(
                     entities=entities,
                     prompt_template=prompt_template,
@@ -173,7 +206,8 @@ IMPORTANTE: NO DEBES CAMBIAR EL TEXTO DE ENTRADA, SÓLO AGREGAR LAS ETIQUETAS.""
                     "prediction": [
                         t[1] for t in model.predict_tokenized([x["tokens"]])[0]
                     ]
-                }, num_proc=12
+                },
+                num_proc=12,
             )
 
             sentences = test_data["tokens"]
