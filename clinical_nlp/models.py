@@ -3,23 +3,34 @@ import json, json5
 from unidecode import unidecode
 import re
 from time import sleep
+
 # logger
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 class IclModel:
-    def __init__(self, model_url, api_key=None, max_tokens=256, stop=["\n", "###"], max_retries=3):
+    def __init__(
+        self,
+        model_url,
+        model_name=None,
+        api_key=None,
+        max_tokens=256,
+        stop=["\n", "###"],
+        max_retries=3,
+    ):
         self.model_url = model_url
         self.max_tokens = max_tokens
         self.stop = stop
         self.max_retries = max_retries
         self.api_key = api_key
+        self.model_name = model_name
 
     def query_model(self, messages):
         payload = json.dumps(
             {
-                "model": None if not self.api_key else "gpt-3.5-turbo",
+                "model": self.model_name,
                 "messages": messages,
                 "max_tokens": self.max_tokens,
                 "stop": self.stop,
@@ -28,13 +39,17 @@ class IclModel:
         if not self.api_key:
             headers = {"accept": "application/json", "Content-Type": "application/json"}
         else:
-            headers = {"accept": "application/json", "Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"}
-        
+            headers = {
+                "accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+
         for i in range(3):
             completion = ""
             try:
                 response = requests.request(
-                    "POST", self.model_url, headers=headers, data=payload, timeout=2
+                    "POST", self.model_url, headers=headers, data=payload
                 )
                 if "error" in response.json():
                     raise Exception(response.json()["error"])
@@ -51,7 +66,9 @@ class IclModel:
 
 
 class IclClassifier(IclModel):
-    def contextualize(self, system_message, classes, user_template, retry_message):
+    def contextualize(
+        self, system_message, classes, user_template, retry_message, examples=[]
+    ):
         self.classes = classes
         if isinstance(classes, dict):
             classes = list(classes.keys())
@@ -62,6 +79,7 @@ class IclClassifier(IclModel):
         self.system_message = system_message.replace("<classes>", classes_string)
         self.user_template = user_template
         self.retry_message = retry_message
+        self.examples = examples
 
     def predict(self, x):
         def preprocess(sentence):
@@ -84,11 +102,19 @@ class IclClassifier(IclModel):
 
         messages = [
             {"content": f"{self.system_message}", "role": "system"},
+        ]
+
+        if self.examples:
+            for example in self.examples:
+                messages.append({"content": example["text"], "role": "user"})
+                messages.append({"content": example["label"], "role": "assistant"})
+        messages.append(
             {
                 "content": f"{self.user_template}".replace("<x>", x),
                 "role": "user",
             },
-        ]
+        )
+
         for i in range(self.max_retries):
             completion = self.query_model(messages)
             logger.info(f"Completion: {completion}")
@@ -112,20 +138,27 @@ class IclNer(IclModel):
             entity_names_string += e + ", "
         entity_names_string += f"y {values[-1]}"
         schema_string = ""
-        for e,d in items[:-1]:
+        for e, d in items[:-1]:
             schema_string += f'"{e}" para {d}' + ", "
         schema_string += f'y "{items[-1][0]}" para {items[-1][1]}'
-        self.system_message = system_message.replace("<entities>", entity_names_string).replace("<schema>", schema_string)
+        self.system_message = system_message.replace(
+            "<entities>", entity_names_string
+        ).replace("<schema>", schema_string)
         self.user_template = user_template
         self.entities = keys
-    
+
     def predict(self, x):
         def get_json(completion):
             try:
-                json = re.search(r".*({.*}).*", completion, flags=re.DOTALL).group(1).strip()
+                json = (
+                    re.search(r".*({.*}).*", completion, flags=re.DOTALL)
+                    .group(1)
+                    .strip()
+                )
             except:
                 raise Exception(f"No JSON was found on your answer.")
-            return re.sub("(\w+):", r'"\1":',  json)
+            return re.sub("(\w+):", r'"\1":', json)
+
         messages = [
             {"content": f"{self.system_message}", "role": "system"},
             {
@@ -140,7 +173,12 @@ class IclNer(IclModel):
         except Exception as e:
             logger.warning(e)
             messages.append({"content": completion, "role": "assistant"})
-            messages.append({"content": f"No puedo decodificar tu json porque tiene este error: {e}", "role": "user"})
+            messages.append(
+                {
+                    "content": f"No puedo decodificar tu json porque tiene este error: {e}",
+                    "role": "user",
+                }
+            )
             try:
                 completion = self.query_model(messages)
                 y = json5.loads(get_json(completion))
@@ -151,8 +189,12 @@ class IclNer(IclModel):
         if y:
             for entity in self.entities:
                 if entity in y:
+
                     def checktype(obj):
-                        return isinstance(obj, list) and all(isinstance(elem, str) for elem in obj)
+                        return isinstance(obj, list) and all(
+                            isinstance(elem, str) for elem in obj
+                        )
+
                     if checktype(y[entity]):
                         result[entity] = y[entity]
                     else:
